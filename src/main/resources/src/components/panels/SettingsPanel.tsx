@@ -17,7 +17,6 @@ import { SettingsItem } from "./SettingsItem";
 import { SettingsRow } from "./SettingsRow";
 import { SettingsControlInput } from "./SettingsControlInput";
 import { ColorSwatch, GradientRow } from "@/components/colorpicker";
-import type { UpdateInfo } from "@/types";
 import {
   Select,
   SelectContent,
@@ -29,9 +28,6 @@ import {
 interface Props {
   onClose: () => void;
   onReady?: () => void;
-  currentVersion?: string;
-  updateInfo?: UpdateInfo | null;
-  onCheckUpdate?: () => void;
 }
 
 const DISPLAY_MODES: { value: DisplayMode; label: string; description: string }[] = [
@@ -64,13 +60,7 @@ const FONT_FAMILIES: { value: FontFamily; label: string }[] = [
   { value: "NEXON Lv2 Gothic", label: "NEXON Lv2 Gothic" },
 ];
 
-export const SettingsPanel = ({
-  onClose,
-  onReady,
-  currentVersion,
-  updateInfo,
-  onCheckUpdate,
-}: Props) => {
+export const SettingsPanel = ({ onClose, onReady }: Props) => {
   const {
     hotkey,
     setHotkey,
@@ -101,6 +91,12 @@ export const SettingsPanel = ({
     stop: stopHide,
     reset: resetHide,
   } = useHotkeyCapture(hideHotkey);
+
+  const [appVersion, setAppVersion] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    const v = (window as unknown as { javaBridge?: { getVersion?: () => string } }).javaBridge?.getVersion?.();
+    if (v) setAppVersion(v);
+  }, []);
 
   const [snapshot] = useState(() => ({
     hotkey,
@@ -162,20 +158,8 @@ export const SettingsPanel = ({
         <SettingsItem>
           <SettingsRow
             title="버전 정보"
-            description={currentVersion ? `v${currentVersion}` : "-"}
-            rightClassName="flex items-center">
-            <Button
-              onClick={onCheckUpdate}
-              variant="ghost"
-              size="lg"
-              className={
-                updateInfo
-                  ? " py-3 transition-all text-green-400 border border-green-400/30 hover:bg-green-400/10"
-                  : " py-3 transition-all opacity-60 hover:opacity-100"
-              }>
-              {updateInfo ? `v${updateInfo.latestVersion} 업데이트` : "업데이트 확인"}
-            </Button>
-          </SettingsRow>
+            description={appVersion ? `v${appVersion}` : "-"}
+          />
         </SettingsItem>
 
         <SettingsItem>

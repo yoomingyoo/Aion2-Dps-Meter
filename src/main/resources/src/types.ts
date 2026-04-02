@@ -57,30 +57,8 @@ export interface Details {
   skills: Skill[];
 }
 
-export interface Version {
-  major: number;
-  minor: number;
-  patch: number;
-  pre: string | null;
-  raw: string;
-}
-
 export interface Hotkey {
   modifiers: number;
   vkCode: number;
 }
-export type PanelType = "details" | "settings" | "update" | "history" | null;
-export interface UpdateInfo {
-  currentVersion: string;
-  msiUrl: string;
-  latestVersion: string;
-  isPrerelease: boolean;
-}
-
-export type DownloadState =
-  | { status: "idle" }
-  | { status: "downloading"; percent: number }
-  | { status: "complete" }
-  | { status: "error" };
-
-export type CheckStatus = "idle" | "checking" | "upToDate" | "updateAvailable" | "error";
+export type PanelType = "details" | "settings" | "history" | null;

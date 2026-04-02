@@ -8,7 +8,6 @@ import { Header } from "@/components/Header.tsx";
 import { TargetInfo } from "@/components/TargetInfo";
 import { SidePanel } from "@/components/panels/SidePanel.tsx";
 import { CombatTimer } from "@/components/CombatTimer.tsx";
-import { useVersionCheck } from "@/hooks/useVersionCheck";
 import { useResizable } from "@/hooks/useResizable";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 // import { TooltipProvider } from "@/components/ui/tooltip";
@@ -30,16 +29,6 @@ export default function App() {
 
   const activePanelRef = useRef<PanelType>(null);
   const selectedRef = useRef<Player | null>(null);
-  const {
-    updateInfo,
-    currentVersion,
-    openReleasePage,
-    downloadState,
-    retryDownload,
-    startUpdate,
-    checkUpdate,
-    checkStatus,
-  } = useVersionCheck();
 
   const headerPosition = useSettingsStore((s) => s.headerPosition);
 
@@ -87,10 +76,6 @@ export default function App() {
   const handleClose = useCallback(() => {
     setActivePanel(null);
   }, []);
-  const handleCheckUpdate = useCallback(() => {
-    checkUpdate();
-    handlePanelToggle("update");
-  }, []);
 
   useEffect(() => {
     activePanelRef.current = activePanel;
@@ -99,9 +84,6 @@ export default function App() {
     selectedRef.current = selected;
   }, [selected]);
 
-  useEffect(() => {
-    if (updateInfo) setActivePanel("update");
-  }, [updateInfo]);
   const meterCss = `
   rounded-lg transition-all duration-300 text-[rgba(215,215,215)] p-4 
   ${
@@ -197,20 +179,12 @@ export default function App() {
             player={selected}
             onClose={handleClose}
             combatTime={formatBattleTime(battleTime)}
-            updateInfo={updateInfo}
-            onUpdate={startUpdate}
-            checkStatus={checkStatus}
-            downloadState={downloadState}
-            onRetryDownload={retryDownload}
             formatBattleTime={formatBattleTime}
             historyIdx={selectedHistoryIdx}
-            onOpenReleasePage={openReleasePage}
             onSelectHistory={(idx, report) => {
               setHistoryData(report);
               setSelectedHistoryIdx(idx);
             }}
-            currentVersion={currentVersion ?? undefined}
-            onCheckUpdate={handleCheckUpdate}
           />
         </div>
       </div>

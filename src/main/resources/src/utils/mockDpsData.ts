@@ -632,18 +632,5 @@ export const injectMockDpsData = () => {
     getVersion: () => "1.2.1",
     openBrowser: (url: string) => console.log("[mock] openBrowser:", url),
     exitApp: () => console.log("[mock] exitApp"),
-    startUpdate: (url: string) => {
-      console.log("[mock] startUpdate:", url);
-      let percent = 0;
-      const timer = setInterval(() => {
-        percent += Math.floor(Math.random() * 10 + 5);
-        if (percent >= 100) {
-          percent = 100;
-          clearInterval(timer);
-          setTimeout(() => (window as any).onDownloadComplete?.(), 500);
-        }
-        (window as any).onDownloadProgress?.(percent);
-      }, 400);
-    },
   };
 };
