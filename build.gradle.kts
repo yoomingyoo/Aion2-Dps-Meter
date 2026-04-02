@@ -1,11 +1,10 @@
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.gradle.api.tasks.application.CreateStartScripts
 
 plugins {
     kotlin("jvm")
     id("org.jetbrains.compose")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization") version "2.0.0"
-
 }
 
 group = "com.tbread"
@@ -15,6 +14,12 @@ tasks.processResources {
     outputs.upToDateWhen { false }
     filesMatching("version.properties") {
         expand("version" to project.version)
+    }
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
     }
 }
 
@@ -51,35 +56,34 @@ dependencies {
     implementation("net.java.dev.jna:jna-platform:5.17.0")
 
     implementation("at.yawk.lz4:lz4-java:1.10.4")
+}
 
-    if (file("upload").exists()) {
-        runtimeOnly(project(":upload"))
-    }
+// installDist without Gradle's application plugin (avoids duplicate `run` task vs Compose Desktop)
+tasks.register<CreateStartScripts>("createStartScripts") {
+    group = "distribution"
+    description = "Generates Windows/Unix scripts for the portable layout"
+    applicationName = "MGMeter"
+    mainClass.set("com.tbread.MainKt")
+    // Include the project jar + runtime dependencies so the generated scripts can boot.
+    val jarFile = tasks.jar.get().archiveFile.get().asFile
+    classpath = files(jarFile, configurations.runtimeClasspath.get())
+    outputDir = layout.buildDirectory.dir("install/MGMeter/bin").get().asFile
+    dependsOn(tasks.jar)
+}
+
+tasks.register<Copy>("installDist") {
+    group = "distribution"
+    description = "Copies runtime libraries next to generated start scripts (build/install/MGMeter)"
+    dependsOn("createStartScripts", tasks.jar)
+    val libDir = layout.buildDirectory.dir("install/MGMeter/lib")
+    into(libDir)
+    val jarFile = tasks.jar.get().archiveFile.get().asFile
+    from(jarFile)
+    from(configurations.runtimeClasspath.get())
 }
 
 compose.desktop {
-
     application {
         mainClass = "com.tbread.MainKt"
-
-
-
-        nativeDistributions {
-            windows{
-                // upgradeUuid = "B8A7C3D2-1F4E-4A8B-9C6D-E5F234567890"
-                includeAllModules = true
-                shortcut = true
-                menu = true
-                menuGroup = "aion2meter4j"
-                dirChooser = true
-            }
-            targetFormats(TargetFormat.Msi)
-            packageName = "aion2meter4j"
-            packageVersion = version.toString()
-            copyright = "Copyright 2026 TK open public Licensed under MIT License"
-        }
-
-
     }
 }
-

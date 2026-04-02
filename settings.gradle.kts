@@ -14,7 +14,3 @@ pluginManagement {
 }
 
 rootProject.name = "aion2meter4j"
-
-if (file("upload").exists()) {
-    include(":upload")
-}

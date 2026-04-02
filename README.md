@@ -34,8 +34,8 @@ git clone https://github.com/TK-open-public/Aion2-Dps-Meter.git
 # 디렉토리 이동
 cd Aion2-Dps-Meter
 
-# msi 빌드
-./gradlew packageDistributionForCurrentOS
+# 포터블 zip 빌드 (Windows: 저장소 루트에서 build.bat 실행)
+# build\distributions\MGMeter-portable.zip 생성
 ```
 
 ## 사용법
@@ -43,11 +43,11 @@ cd Aion2-Dps-Meter
 
 1. npcap (https://npcap.com/#download) 를 설치합니다. (Install Npcap in WinPcap API-compatible Mode 필수 체크)
 
-2. [이동](https://github.com/TK-open-public/Aion2-Dps-Meter/releases) 해당 링크에서 aion2meter4j-x.x.x.msi을 다운받아 설치합니다.
+2. 포터블 패키지(MGMeter-portable.zip)를 원하는 폴더에 풀고, **RunMGMeter.bat**을 실행합니다 (UAC로 관리자 권한 요청).
 
 3. **아이온이 켜져있는 상태라면 먼저 캐릭터 선택창으로 이동합니다**.
 
-4. 프로그램이 설치된 위치 (기본 설치 경로 C:\Program Files\aion2meter4j) 또는 시작 창의 바로가기에 aion2meter4j.exe 를 **반드시 관리자 권한으로 실행합니다.**
+4. 압축을 푼 폴더에서 **RunMGMeter.bat**으로 실행합니다. (패킷 캡처를 위해 관리자 권한이 필요합니다.)
 
 ![image](./readme-asset/firstUI_new.png)
 
