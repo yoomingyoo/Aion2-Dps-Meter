@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "com.tbread"
-version = "1.4.0"
+version = "1.5.0"
 
 tasks.processResources {
     outputs.upToDateWhen { false }
@@ -56,6 +56,11 @@ dependencies {
     implementation("net.java.dev.jna:jna-platform:5.17.0")
 
     implementation("at.yawk.lz4:lz4-java:1.10.4")
+
+    // Optional private addon module (not tracked in this repo).
+    if (file("addon").exists()) {
+        runtimeOnly(project(":addon"))
+    }
 }
 
 // installDist without Gradle's application plugin (avoids duplicate `run` task vs Compose Desktop)

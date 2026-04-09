@@ -35,7 +35,9 @@ export const SidePanel = ({
     setCurrentType(panelType);
     setCurrentPlayer(panelPlayer);
     setRendered(true);
+    setTimeout(() => setVisible(true), 10);
   };
+
   const meterWidth = useSettingsStore((s) => s.meterWidth);
 
   const closePanel = (callback?: () => void) => {
@@ -81,20 +83,17 @@ export const SidePanel = ({
           onClose={onClose}
           combatTime={combatTime}
           historyIdx={historyIdx}
-          onReady={() => setTimeout(() => setVisible(true), 10)}
         />
       )}
       {currentType === "settings" && (
         <SettingsPanel
           onClose={onClose}
-          onReady={() => setTimeout(() => setVisible(true), 10)}
         />
       )}
       {currentType === "history" && (
         <HistoryPanel
           key={currentPlayer?.id}
           onClose={onClose}
-          onReady={() => setTimeout(() => setVisible(true), 10)}
           onSelectHistory={onSelectHistory}
           formatBattleTime={formatBattleTime}
         />

@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import type { Hotkey } from "@/types";
 import { parseHotkeyString } from "@/utils/hotKey";
+import { DEFAULT_VISIBLE_SKILL_CODES } from "@/constants/codes";
+
 export type DisplayMode =
   | "dps_percent"
   | "amount_dps_percent"
@@ -22,8 +24,8 @@ export interface ThemeColors {
   warningBar: [string, string];
   errorBar: [string, string];
   bossBar: [string, string];
-  serverAColor: string; // 1001~1021
-  serverBColor: string; // 2001~2021
+  serverAColor: string;
+  serverBColor: string;
   serverDefaultColor: string;
   meterStatAmount: string;
   meterStatDps: string;
@@ -58,6 +60,9 @@ interface SettingsState {
   setMeterWidth: (w: number) => void;
   rowHeight: number;
   setRowHeight: (h: number) => void;
+  detailWidth: number;
+  setDetailWidth: (w: number) => void;
+  isLoaded: boolean;
   detailHeight: number;
   setDetailHeight: (h: number) => void;
   setHotkey: (h: Hotkey) => void;
@@ -73,6 +78,13 @@ interface SettingsState {
   setTheme: (theme: ThemeColors) => void;
   setThemeColor: <K extends keyof ThemeColors>(key: K, value: ThemeColors[K]) => void;
   resetTheme: () => void;
+  windowX: number;
+  windowY: number;
+  setWindowPosition: (x: number, y: number) => void;
+  visibleSkillCodes: number[];
+  setVisibleSkillCodes: (codes: number[]) => void;
+  showPower: boolean;
+  setShowPower: (v: boolean) => void;
 }
 
 const jb = () => (window as any).javaBridge;
@@ -84,12 +96,18 @@ const defaultSettings = {
   rowHeight: 36,
   isDebugMode: false,
   detailHeight: 600,
+  detailWidth: 800,
+  windowX: 0,
+  windowY: 0,
+  isLoaded: false,
   displayMode: "dps_percent" as DisplayMode,
   nameDisplay: "all" as NameDisplay,
-  fontFamily: "Spoqa Han Sans Neo" as FontFamily,
+  fontFamily: "NEXON Lv2 Gothic" as FontFamily,
   headerPosition: "top" as HeaderPosition,
   isMinimal: false,
   theme: DEFAULT_THEME,
+  visibleSkillCodes: DEFAULT_VISIBLE_SKILL_CODES, 
+  showPower: true,
 };
 
 export const useSettingsStore = create<SettingsState>((set) => {
@@ -105,6 +123,13 @@ export const useSettingsStore = create<SettingsState>((set) => {
 
     const savedThemeRaw = j.loadProps?.("theme");
     let savedTheme: ThemeColors = DEFAULT_THEME;
+
+    const savedSkillCodesRaw = j.loadProps?.("visibleSkillCodes");
+    let savedSkillCodes = DEFAULT_VISIBLE_SKILL_CODES;
+    try {
+      if (savedSkillCodesRaw) savedSkillCodes = JSON.parse(savedSkillCodesRaw);
+    } catch {}
+
     try {
       if (savedThemeRaw) savedTheme = { ...DEFAULT_THEME, ...JSON.parse(savedThemeRaw) };
     } catch {}
@@ -115,6 +140,7 @@ export const useSettingsStore = create<SettingsState>((set) => {
       meterWidth: Number(j.loadProps?.("meterWidth")) || defaultSettings.meterWidth,
       rowHeight: Number(j.loadProps?.("rowHeight")) || defaultSettings.rowHeight,
       detailHeight: Number(j.loadProps?.("detailHeight")) || defaultSettings.detailHeight,
+      detailWidth: Number(j.loadProps?.("detailWidth")) || defaultSettings.detailWidth,
       displayMode: j.loadProps?.("displayMode") ?? defaultSettings.displayMode,
       isDebugMode: j.isDebuggingMode?.() ?? false,
       nameDisplay: j.loadProps?.("nameDisplay") ?? defaultSettings.nameDisplay,
@@ -122,9 +148,14 @@ export const useSettingsStore = create<SettingsState>((set) => {
       isMinimal: savedIsMinimal,
       headerPosition: j.loadProps?.("headerPosition") ?? defaultSettings.headerPosition,
       theme: savedTheme,
+      visibleSkillCodes: savedSkillCodes,
+      windowX: Number(j.loadProps?.("windowX")) || defaultSettings.windowX,
+      windowY: Number(j.loadProps?.("windowY")) || defaultSettings.windowY,
+      showPower: j.loadProps?.("showPower") === "false" ? false : true,
+      isLoaded: true,
     });
     clearInterval(interval);
-  }, 300);
+  }, 100);
 
   return {
     hotkey: defaultSettings.hotkey,
@@ -133,12 +164,18 @@ export const useSettingsStore = create<SettingsState>((set) => {
     meterWidth: defaultSettings.meterWidth,
     rowHeight: defaultSettings.rowHeight,
     detailHeight: defaultSettings.detailHeight,
+    detailWidth: defaultSettings.detailWidth,
+    visibleSkillCodes: defaultSettings.visibleSkillCodes,
     displayMode: defaultSettings.displayMode,
     nameDisplay: defaultSettings.nameDisplay,
     fontFamily: defaultSettings.fontFamily,
     isDebugMode: defaultSettings.isDebugMode,
     headerPosition: defaultSettings.headerPosition,
     theme: defaultSettings.theme,
+    windowX: defaultSettings.windowX,
+    windowY: defaultSettings.windowY,
+    showPower: defaultSettings.showPower,
+    isLoaded: defaultSettings.isLoaded,
 
     setHotkey: (hotkey) => {
       set({ hotkey });
@@ -182,6 +219,10 @@ export const useSettingsStore = create<SettingsState>((set) => {
       set({ detailHeight });
       jb()?.saveProps?.("detailHeight", detailHeight);
     },
+    setDetailWidth: (detailWidth) => {
+      set({ detailWidth });
+      jb()?.saveProps?.("detailWidth", detailWidth);
+    },
     setHeaderPosition: (headerPosition) => {
       set({ headerPosition });
       jb()?.saveProps?.("headerPosition", headerPosition);
@@ -199,6 +240,19 @@ export const useSettingsStore = create<SettingsState>((set) => {
     resetTheme: () => {
       set({ theme: DEFAULT_THEME });
       jb()?.saveProps?.("theme", JSON.stringify(DEFAULT_THEME));
+    },
+    setWindowPosition: (windowX, windowY) => {
+      set({ windowX, windowY });
+      jb()?.saveProps?.("windowX", String(windowX));
+      jb()?.saveProps?.("windowY", String(windowY));
+    },
+    setVisibleSkillCodes: (visibleSkillCodes) => {
+      set({ visibleSkillCodes });
+      jb()?.saveProps?.("visibleSkillCodes", JSON.stringify(visibleSkillCodes));
+    },
+    setShowPower: (showPower) => {
+      set({ showPower });
+      jb()?.saveProps?.("showPower", String(showPower));
     },
   };
 });

@@ -1,11 +1,18 @@
 package com.tbread.webview
 
+import com.sun.jna.platform.win32.Kernel32
+import com.sun.jna.platform.win32.Psapi
+import com.sun.jna.platform.win32.User32
+import com.sun.jna.platform.win32.WinNT
 import com.tbread.DpsCalculator
 import com.tbread.config.HotkeyHandler
 import com.tbread.config.PropertyHandler
 import com.tbread.config.VersionConfig
 import com.tbread.data.DataManager
 import com.tbread.entity.DpsReport
+import com.tbread.entity.JoinRequestUser
+import com.tbread.packet.PacketEvent
+import com.tbread.packet.PacketEventBus
 import javafx.animation.KeyFrame
 import javafx.animation.Timeline
 import javafx.application.Application
@@ -19,6 +26,9 @@ import javafx.scene.web.WebView
 import javafx.stage.Stage
 import javafx.stage.StageStyle
 import javafx.util.Duration
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import netscape.javascript.JSObject
@@ -38,11 +48,11 @@ class BrowserApp(private val config: VersionConfig, private val dpsCalculator: D
 
     inner class JSBridge(private val stage: Stage, private val hostServices: HostServices) {
 
-        fun saveProps(key:String,value:String){
-            PropertyHandler.setProperty(key,value)
+        fun saveProps(key: String, value: String) {
+            PropertyHandler.setProperty(key, value)
         }
 
-        fun loadProps(key:String): String?{
+        fun loadProps(key: String): String? {
             return PropertyHandler.getProperty(key)
         }
 
@@ -83,7 +93,11 @@ class BrowserApp(private val config: VersionConfig, private val dpsCalculator: D
         }
 
         fun toggleVisibility() {
-            if (stage.isShowing) hideToTray(stage) else showFromTray(stage)
+            if (isVisible) hideToTray(stage) else showFromTray(stage)
+        }
+
+        fun showWindow() {
+            if (!isVisible) showFromTray(stage)
         }
 
         fun getHideHotkey(): String {
@@ -110,18 +124,49 @@ class BrowserApp(private val config: VersionConfig, private val dpsCalculator: D
             return Json.encodeToString(dpsCalculator.battleDetails(DataManager.battleLog(idx)?.report, uid))
         }
 
-        fun getBattleList():String{
+        fun getBattleList(): String {
             return Json.encodeToString(DataManager.recentBattleList())
         }
 
+        fun getLiveBuffOperatingRate(uid: Int): String {
+            val report = dpsCalculator.getLiveReport()
+            val end = if (report.battleEnd == 0L) System.currentTimeMillis() else report.battleEnd
+            return Json.encodeToString(dpsCalculator.getBuffOperatingRate(uid,report.battleStart,end))
+        }
+
+        fun getBuffOperatingRate(idx: Int, uid: Int): String {
+            val report = DataManager.battleLog(idx)?.report ?: return ""
+            return Json.encodeToString(dpsCalculator.getBuffOperatingRate(uid,report.battleStart,report.battleEnd))
+        }
         fun getVersion(): String {
             return version
         }
 
+        fun pushJoinRequest(data: JoinRequestUser) {
+            engine.executeScript("onJoinRequest(${Json.encodeToString(data)})")
+        }
+
+        fun pushJoinRequestRemove(id: Int) {
+            engine.executeScript("onJoinRequestRemove($id)")
+        }
+
+        fun pushExitPartyUI(){
+            engine.executeScript("onExitPartyUI()")
+        }
+
+        fun pushRefuseJoinRequest(){
+            engine.executeScript("onRefuseJoinRequest()")
+        }
     }
 
     @Volatile
     private var dpsData: DpsReport = dpsCalculator.getDps()
+
+    @Volatile
+    private var isVisible = true  // false = 사용자가 직접 숨긴 상태
+
+    @Volatile
+    private var aionEverFocused = false  // Aion2.exe가 한 번이라도 포커싱된 적 있는지
 
     private val debugMode = false
 
@@ -147,7 +192,7 @@ class BrowserApp(private val config: VersionConfig, private val dpsCalculator: D
         }
 
 
-        val scene = Scene(webView, 1800.0, 1000.0)
+        val scene = Scene(webView, 1920.0, 1080.0)
         scene.fill = Color.TRANSPARENT
 
         try {
@@ -168,6 +213,7 @@ class BrowserApp(private val config: VersionConfig, private val dpsCalculator: D
         stage.title = "Aion2 Dps Overlay"
 
         stage.show()
+        applyOverlayWindowStyle(stage.title)
 
         setupTray(stage)
 
@@ -177,15 +223,86 @@ class BrowserApp(private val config: VersionConfig, private val dpsCalculator: D
             }
         }
         HotkeyHandler.registerVisibilityCallback {
-            if (stage.isShowing) hideToTray(stage) else showFromTray(stage)
+            if (isVisible) hideToTray(stage) else showFromTray(stage)
         }
         HotkeyHandler.start()
+        
+        
+        CoroutineScope(Dispatchers.IO).launch {
+            PacketEventBus.events.collect { event ->
+                Platform.runLater {
+                    when (event) {
+                        is PacketEvent.JoinRequest -> bridge.pushJoinRequest(event.user)
+                        is PacketEvent.JoinRequestRemove -> bridge.pushJoinRequestRemove(event.id)
+                        is PacketEvent.ExitPartyUI -> bridge.pushExitPartyUI()
+                        is PacketEvent.RefuseJoinRequest -> bridge.pushRefuseJoinRequest()
+                    }
+                }
+            }
+        }
+        
+        
         Timeline(KeyFrame(Duration.millis(500.0), {
             dpsData = dpsCalculator.getDps()
         })).apply {
             cycleCount = Timeline.INDEFINITE
             play()
         }
+
+        CoroutineScope(Dispatchers.IO).launch {
+            while (true) {
+                kotlinx.coroutines.delay(300)
+                if (!isVisible) continue
+
+                val aionFocused = isAion2Focused()
+                if (!aionEverFocused) {
+                    if (aionFocused) aionEverFocused = true
+                    else continue
+                }
+
+                val shouldShow = aionFocused || isSelfFocused()
+                Platform.runLater {
+                    stage.opacity = if (shouldShow) 1.0 else 0.0
+                }
+            }
+        }
+    }
+
+    private fun isSelfFocused(): Boolean {
+        val hwnd = User32.INSTANCE.GetForegroundWindow() ?: return false
+        val pidRef = com.sun.jna.ptr.IntByReference()
+        User32.INSTANCE.GetWindowThreadProcessId(hwnd, pidRef)
+        return pidRef.value.toLong() == ProcessHandle.current().pid()
+    }
+
+    private fun isAion2Focused(): Boolean {
+        val hwnd = User32.INSTANCE.GetForegroundWindow() ?: return false
+        val pidRef = com.sun.jna.ptr.IntByReference()
+        User32.INSTANCE.GetWindowThreadProcessId(hwnd, pidRef)
+        val foregroundPid = pidRef.value.toLong()
+
+        val hProcess = Kernel32.INSTANCE.OpenProcess(WinNT.PROCESS_QUERY_LIMITED_INFORMATION, false, foregroundPid.toInt())
+            ?: return false
+        return try {
+            val buf = com.sun.jna.Memory(2048)
+            Psapi.INSTANCE.GetModuleFileNameEx(hProcess, null, buf, 1024)
+            val exePath = buf.getWideString(0)
+            exePath.endsWith("Aion2.exe", ignoreCase = true)
+        } finally {
+            Kernel32.INSTANCE.CloseHandle(hProcess)
+        }
+    }
+
+    private fun applyOverlayWindowStyle(title: String) {
+        val GWL_EXSTYLE = -20
+        val WS_EX_TOOLWINDOW = 0x00000080
+        val WS_EX_APPWINDOW = 0x00040000
+        val user32 = User32.INSTANCE
+        val hwnd = user32.FindWindow(null, title) ?: return
+        val exStyle = user32.GetWindowLong(hwnd, GWL_EXSTYLE)
+        user32.SetWindowLong(hwnd, GWL_EXSTYLE,
+            (exStyle or WS_EX_TOOLWINDOW) and WS_EX_APPWINDOW.inv()
+        )
     }
 
     private fun setupTray(stage: Stage) {
@@ -201,8 +318,8 @@ class BrowserApp(private val config: VersionConfig, private val dpsCalculator: D
                 }
 
                 val popup = PopupMenu()
-                val showItem = MenuItem("보이기")
-                showItem.addActionListener { showFromTray(stage) }
+                val showItem = MenuItem("보이기/숨기기")
+                showItem.addActionListener { if (isVisible) hideToTray(stage) else showFromTray(stage) }
                 val exitItem = MenuItem("종료")
                 exitItem.addActionListener {
                     tray.remove(trayIcon)
@@ -217,10 +334,13 @@ class BrowserApp(private val config: VersionConfig, private val dpsCalculator: D
                     isImageAutoSize = true
                     addMouseListener(object : MouseAdapter() {
                         override fun mouseClicked(e: MouseEvent) {
-                            if (e.button == MouseEvent.BUTTON1) showFromTray(stage)
+                            if (e.button == MouseEvent.BUTTON1) {
+                                if (isVisible) hideToTray(stage) else showFromTray(stage)
+                            }
                         }
                     })
                 }
+                tray.add(trayIcon)
             } catch (e: AWTException) {
                 logger.error("트레이 설정 실패", e)
             }
@@ -228,25 +348,16 @@ class BrowserApp(private val config: VersionConfig, private val dpsCalculator: D
     }
 
     private fun hideToTray(stage: Stage) {
-        Platform.runLater { stage.hide() }
-        EventQueue.invokeLater {
-            try {
-                val icon = trayIcon ?: return@invokeLater
-                SystemTray.getSystemTray().add(icon)
-                icon.displayMessage("Aion2 DPS Overlay", "미터기가 아직 실행 중 입니다.", TrayIcon.MessageType.INFO)
-            } catch (e: AWTException) {
-                logger.error("트레이 추가 실패", e)
-            }
-        }
+        isVisible = false
+        Platform.runLater { stage.opacity = 0.0 }
     }
 
     private fun showFromTray(stage: Stage) {
+        isVisible = true
+        aionEverFocused = false  // 포커스 추적 초기화 → Aion2 첫 포커싱 전까지 다시 보임
         Platform.runLater {
-            stage.show()
+            stage.opacity = 1.0
             stage.toFront()
-        }
-        EventQueue.invokeLater {
-            SystemTray.getSystemTray().remove(trayIcon)
         }
     }
 

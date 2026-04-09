@@ -14,3 +14,8 @@ pluginManagement {
 }
 
 rootProject.name = "aion2meter4j"
+
+// Optional private addon module (not tracked in this repo).
+if (file("addon").exists()) {
+    include(":addon")
+}

@@ -1,4 +1,4 @@
-import type { Player } from "../types";
+import type { Player } from "@/types";
 
 interface Contributor {
   id: number;
@@ -6,6 +6,7 @@ interface Contributor {
   job: string;
   isExecutor?: boolean;
   server: number;
+  power: number;
 }
 interface InformationValue {
   amount: number;
@@ -74,7 +75,7 @@ const SERVER_NAMES: Record<string, string> = {
   "2021": "이스할겐",
 };
 
-const getServerLabel = (server?: number) => {
+export const getServerLabel = (server?: number) => {
   if (!server) return "";
   const name = SERVER_NAMES[String(server)];
   if (!name) return "";
@@ -108,7 +109,7 @@ export function parseCombatData(raw: unknown): {
       : contributor.nickname || id;
 
     rows.push({
-      id,
+      id: Number(id) || 0,
       name,
       job: contributor.job ?? "",
       server: contributor.server,
@@ -116,6 +117,7 @@ export function parseCombatData(raw: unknown): {
       amount,
       damageContribution,
       isUser: contributor.isExecutor === true,
+      power: contributor.power ?? 0,
     });
   }
 

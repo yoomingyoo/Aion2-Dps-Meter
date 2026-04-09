@@ -16,7 +16,7 @@ export interface RawCombatData {
 }
 
 export interface Player {
-  id: string;
+  id: number;
   name: string;
   job: string;
   dps: number;
@@ -24,6 +24,7 @@ export interface Player {
   damageContribution: number;
   isUser: boolean;
   server: number;
+  power: number;
 }
 export interface CombatRaw {
   combatants: Record<string, any>;
@@ -34,6 +35,7 @@ export interface Skill {
   time: number;
   crit: number;
   parry: number;
+  shardTimes: number;
   back: number;
   perfect: number;
   double: number;
@@ -54,6 +56,7 @@ export interface Details {
   totalPerfectPct: number;
   totalDoublePct: number;
   combatTime: string;
+  buffOperatingRate: BuffEntry[];
   skills: Skill[];
 }
 
@@ -61,4 +64,22 @@ export interface Hotkey {
   modifiers: number;
   vkCode: number;
 }
+export type BuffEntry = {
+  code: string;
+  name: string;
+  summary: string;
+  effect: string;
+  operatingRate: number;
+  actorId: number;
+};
+
 export type PanelType = "details" | "settings" | "history" | null;
+
+export type BuffEntry = {
+  code: string;
+  name: string;
+  summary: string;
+  effect: string;
+  operatingRate: number;
+  actorId: number;
+};
