@@ -22,7 +22,7 @@ export default function App() {
     // isCollapse,
     isInCombat,
     remainHp,
-    reset,
+    // reset,
     // toggleCollapse,
     battleTime,
     formatBattleTime,
@@ -41,6 +41,12 @@ export default function App() {
   const { meterWidth, onMouseDown, isDragging } = useResizable();
   const rowHeight = useSettingsStore((s) => s.rowHeight);
   const isMinimal = useSettingsStore((s) => s.isMinimal);
+  const showCombatTimerInMinimal = useSettingsStore((s) => s.showCombatTimerInMinimal);
+  const showTargetInfoInMinimal = useSettingsStore((s) => s.showTargetInfoInMinimal);
+  const meterOpacity = useSettingsStore((s) => s.meterOpacity);
+  const panelOpacity = useSettingsStore((s) => s.panelOpacity);
+  const meterListOpacity = useSettingsStore((s) => s.meterListOpacity);
+
   const [selectedHistoryIdx, setSelectedHistoryIdx] = useState<number | undefined>(undefined);
 
   const handlePanelToggle = useCallback((panel: PanelType) => {
@@ -56,34 +62,32 @@ export default function App() {
   //   setSelected(null);
   // }, [toggleCollapse]);
 
-  const handleReset = useCallback(() => {
-    reset();
-    setSelectedHistoryIdx(undefined);
-    setActivePanel(null);
-    setSelected(null);
-  }, [reset]);
+  // const handleReset = useCallback(() => {
+  //   reset();
+  //   setSelectedHistoryIdx(undefined);
+  //   setActivePanel(null);
+  //   setSelected(null);
+  // }, [reset]);
 
-  const handleSelect = useCallback(
-    (id: number) => {
-      if (wasDraggingRef.current) return;
+  const playersRef = useRef<Player[]>([]);
+  useEffect(() => {
+    playersRef.current = players;
+  }, [players]);
 
-      const player = players.find((p) => p.id === id);
-      if (!player) return;
-      if (activePanelRef.current === "details" && selectedRef.current?.id === player.id) {
-        setActivePanel(null);
-        return;
-      }
-      setSelected(player);
-      setActivePanel("details");
-    },
-    [players],
-  );
+  const handleSelect = useCallback((id: number) => {
+    if (wasDraggingRef.current) return;
+    const player = playersRef.current.find((p) => p.id === id);
+    if (!player) return;
+    if (activePanelRef.current === "details" && selectedRef.current?.id === player.id) {
+      setActivePanel(null);
+      return;
+    }
+    setSelected(player);
+    setActivePanel("details");
+  }, []);
   const handleClose = useCallback(() => {
     setActivePanel(null);
   }, []);
-
-  // Update panel is intentionally disabled in this fork (portable zip only).
-
   useEffect(() => {
     activePanelRef.current = activePanel;
   }, [activePanel]);
@@ -91,19 +95,12 @@ export default function App() {
     selectedRef.current = selected;
   }, [selected]);
 
-  const meterCss = `
-  rounded-lg transition-all duration-300 text-[rgba(215,215,215)] p-4 
-  ${
-    isMinimal
-      ? "bg-transparent   hover:bg-[rgba(12,22,40,0.4)] "
-      : "bg-[rgba(12,22,40,0.4)] border-[rgba(209,213,219,0.3)]"
-  }
-`;
   useEffect(() => {
     if (!isLoaded) return;
     (window as any).javaBridge?.moveWindow(windowX, windowY);
   }, [isLoaded]);
 
+  // Update panel is intentionally disabled in this fork (portable zip only).
 
   useEffect(() => {
     const handleKeydown = (e: KeyboardEvent) => {
@@ -113,13 +110,13 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeydown);
   }, [handleClose]);
 
-  useEffect(() => {
-    (window as any).strongReset = () => {
-      reset();
-      setActivePanel(null);
-      setSelected(null);
-    };
-  }, [reset]);
+  // useEffect(() => {
+  //   (window as any).strongReset = () => {
+  //     reset();
+  //     setActivePanel(null);
+  //     setSelected(null);
+  //   };
+  // }, [reset]);
 
   useEffect(() => {
     if (isInCombat) {
@@ -140,12 +137,10 @@ export default function App() {
     (window as any).onRefuseJoinRequest = () => {
       refuseRequest();
     };
-  }, [addRequest, removeRequest, clearAll, refuseRequest]);
+  }, []);
   const meterClass = cn(
-    "rounded-lg transition-all duration-300 text-[rgba(215,215,215)] p-4",
-    isMinimal
-      ? "bg-transparent group-hover/app:bg-[rgba(12,22,40,0.4)]"
-      : "bg-[rgba(12,22,40,0.4)]",
+    "rounded-lg transition-color duration-300 text-[rgba(215,215,215)] py-2 px-3",
+    isMinimal ? "bg-transparent group-hover/app:bg-(--meter-bg)" : "bg-(--meter-bg)",
   );
 
   const headerClass = cn(
@@ -157,62 +152,76 @@ export default function App() {
     "drag-area cursor-move select-none relative group/app",
     isDragging && "pointer-events-none",
   );
+  const handleSelectHistory = useCallback(
+    (idx: number, report: any) => {
+      setHistoryData(report);
+      setSelectedHistoryIdx(idx);
+    },
+    [setHistoryData],
+  );
   return (
     // <TooltipProvider>
     <div
-      style={{ width: "fit-content" }}
+      style={
+        {
+          width: "fit-content",
+          "--meter-bg": `rgba(12,22,40,${meterOpacity})`,
+          "--panel-bg": `rgba(12,22,40,${panelOpacity})`,
+        } as React.CSSProperties
+      }
       className={rootClass}>
       <div
         className={meterClass}
         style={{ width: meterWidth }}>
         {headerPosition === "top" && (
-          <div className=" mb-4">
+          <div className=" mb-2">
             <Header
               className={headerClass}
-              reset={handleReset}
+              // reset={handleReset}
               setSettings={handlePanelToggle}
               // isCollapse={isCollapse}
               // toggleCollapse={handleToggleCollapse}
             />
           </div>
         )}
-        {players.length > 0 && !isMinimal && (
-          <TargetInfo
-            targetName={targetName}
+        <div style={{ opacity: meterListOpacity }}>
+          {players.length > 0 && (!isMinimal || showTargetInfoInMinimal) && (
+            <TargetInfo
+              targetName={targetName}
+              rowHeight={rowHeight}
+              remainHp={remainHp}
+            />
+          )}
+          <MeterList
+            players={players}
+            selectedId={selected?.id}
+            onSelect={handleSelect}
             rowHeight={rowHeight}
-            remainHp={remainHp}
           />
-        )}
-        <MeterList
-          players={players}
-          selectedId={selected?.id}
-          onSelect={handleSelect}
-          rowHeight={rowHeight}
-        />
 
-        {battleTime && !isMinimal && (
-          <CombatTimer
-            isInCombat={isInCombat}
-            combatTime={formatBattleTime(battleTime)}
-          />
+          {battleTime && (!isMinimal || showCombatTimerInMinimal) && (
+            <CombatTimer
+              isInCombat={isInCombat}
+              combatTime={formatBattleTime(battleTime)}
+            />
+          )}
+        </div>
+        {headerPosition === "bottom" && (
+          <div className=" mt-2">
+            <Header
+              className={headerClass}
+              // reset={handleReset}
+              setSettings={handlePanelToggle}
+              // isCollapse={isCollapse}
+              // toggleCollapse={handleToggleCollapse}
+            />
+          </div>
         )}
-
         {!isMinimal && (
           <div
             onMouseDown={onMouseDown}
             className="resizeHandle absolute top-1/2 -translate-y-1/2 -right-3 w-1 h-16 cursor-e-resize flex items-center justify-center opacity-60 hover:opacity-100 transition-opacity group">
             <div className="w-1 h-10 rounded-full bg-white  transition-colors" />
-          </div>
-        )}
-        {headerPosition === "bottom" && (
-          <div className=" mt-4">
-            <Header
-              className={headerClass}
-              reset={handleReset}
-              setSettings={handlePanelToggle}
-              // isCollapse={isCollapse}
-              // toggleCollapse={handleToggleCollapse}
-            />
           </div>
         )}
       </div>
@@ -227,14 +236,12 @@ export default function App() {
         <SidePanel
           type={activePanel}
           player={selected}
+          players={players}
           onClose={handleClose}
           combatTime={formatBattleTime(battleTime)}
           formatBattleTime={formatBattleTime}
           historyIdx={selectedHistoryIdx}
-          onSelectHistory={(idx, report) => {
-            setHistoryData(report);
-            setSelectedHistoryIdx(idx);
-          }}
+          onSelectHistory={handleSelectHistory}
         />
       </div>
     </div>

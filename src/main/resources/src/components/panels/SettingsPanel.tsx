@@ -34,10 +34,10 @@ const DISPLAY_MODES: { value: DisplayMode; label: string; description: string }[
   { value: "dps_percent", label: "DPS / 기여도", description: "45,000/초 (35.5%)" },
   {
     value: "amount_dps_percent",
-    label: "누적 / DPS / 기여도",
+    label: "누적(축약) / DPS / 기여도",
     description: "1.2M 45,000/초 (35.5%)",
   },
-  { value: "amount_percent", label: "누적 / 기여도", description: "1.2M (35.5%)" },
+  { value: "amount_percent", label: "누적(축약) / 기여도", description: "1.2M (35.5%)" },
   {
     value: "amount_full_dps_percent",
     label: "누적(전체) / DPS / 기여도",
@@ -53,11 +53,12 @@ const NAME_DISPLAY_MODES: { value: NameDisplay; label: string }[] = [
 ];
 
 const FONT_FAMILIES: { value: FontFamily; label: string }[] = [
+  { value: "Malgun Gothic", label: "맑은 고딕 (윈도우 기본 폰트)" },
+  { value: "NEXON Lv2 Gothic", label: "NEXON Lv2 Gothic" },
   { value: "Spoqa Han Sans Neo", label: "Spoqa Han Sans Neo" },
   { value: "Freesentation", label: "Freesentation" },
   { value: "Tmoney Round Wind", label: "Tmoney Round Wind" },
   { value: "Pretendard", label: "Pretendard" },
-  { value: "NEXON Lv2 Gothic", label: "NEXON Lv2 Gothic" },
 ];
 
 export const SettingsPanel = ({ onClose, onReady }: Props) => {
@@ -82,11 +83,23 @@ export const SettingsPanel = ({ onClose, onReady }: Props) => {
     setThemeColor,
     setTheme,
     resetTheme,
-    showPower,
-    setShowPower,
+    showCombatTimerInMinimal,
+    setShowCombatTimerInMinimal,
+    showTargetInfoInMinimal,
+    setShowTargetInfoInMinimal,
+    meterOpacity,
+    setMeterOpacity,
+    panelOpacity,
+    setPanelOpacity,
+    meterListOpacity,
+    setMeterListOpacity,
+    // showPower,
+    // setShowPower,
   } = useSettingsStore();
 
-  const { pending, start, stop, reset } = useHotkeyCapture(hotkey);
+  // const { pending,
+  //   //  start, stop,
+  //    reset } = useHotkeyCapture(hotkey);
   const {
     pending: pendingHide,
     start: startHide,
@@ -109,6 +122,11 @@ export const SettingsPanel = ({ onClose, onReady }: Props) => {
     fontFamily,
     rowHeight,
     isMinimal,
+    showCombatTimerInMinimal,
+    showTargetInfoInMinimal,
+    meterOpacity,
+    panelOpacity,
+    meterListOpacity,
     theme: { ...theme },
   }));
 
@@ -125,7 +143,7 @@ export const SettingsPanel = ({ onClose, onReady }: Props) => {
   };
 
   const handleSave = () => {
-    setHotkey(pending);
+    // setHotkey(pending);
     setHideHotkey(pendingHide);
     onClose();
   };
@@ -136,11 +154,16 @@ export const SettingsPanel = ({ onClose, onReady }: Props) => {
     setFontFamily(snapshot.fontFamily);
     setRowHeight(snapshot.rowHeight);
     setIsMinimal(snapshot.isMinimal);
+    setShowCombatTimerInMinimal(snapshot.showCombatTimerInMinimal);
+    setShowTargetInfoInMinimal(snapshot.showTargetInfoInMinimal);
     setHotkey(snapshot.hotkey);
-    reset(snapshot.hotkey);
+    // reset(snapshot.hotkey);
     resetHide(snapshot.hideHotkey);
     setHeaderPosition(snapshot.headerPosition);
     setTheme(snapshot.theme as ThemeColors);
+    setMeterOpacity(snapshot.meterOpacity);
+    setPanelOpacity(snapshot.panelOpacity);
+    setMeterListOpacity(snapshot.meterListOpacity);
     onClose();
   };
 
@@ -162,18 +185,6 @@ export const SettingsPanel = ({ onClose, onReady }: Props) => {
             title="버전 정보"
             description={appVersion ? `v${appVersion}` : "-"}
           />
-        </SettingsItem>
-
-        <SettingsItem>
-          <SettingsRow
-            title="컴팩트 모드"
-            description="DPS만 표시하고 나머지를 숨깁니다">
-            <Switch
-              checked={isMinimal}
-              onCheckedChange={(v) => setIsMinimal(v)}
-              className="data-[state=checked]:bg-purple-500"
-            />
-          </SettingsRow>
         </SettingsItem>
 
         <SettingsItem>
@@ -227,13 +238,14 @@ export const SettingsPanel = ({ onClose, onReady }: Props) => {
             </Select>
           </SettingsRow>
         </SettingsItem>
+
         <div className="my-3 flex items-center gap-2">
           <div className="flex-1 h-px bg-white/10" />
           <span className="text-xs opacity-40 px-2 shrink-0">단축키 설정</span>
           <div className="flex-1 h-px bg-white/10" />
         </div>
         <SettingsItem>
-          <SettingsRow
+          {/* <SettingsRow
             title="새로고침"
             align="center"
             rightClassName="w-44">
@@ -244,7 +256,7 @@ export const SettingsPanel = ({ onClose, onReady }: Props) => {
               value={formatHotkey(pending.modifiers, pending.vkCode)}
               className="cursor-pointer"
             />
-          </SettingsRow>
+          </SettingsRow> */}
 
           <SettingsRow
             title="최소화"
@@ -259,12 +271,44 @@ export const SettingsPanel = ({ onClose, onReady }: Props) => {
             />
           </SettingsRow>
         </SettingsItem>
+
+        <div className="my-3 flex items-center gap-2">
+          <div className="flex-1 h-px bg-white/10" />
+          <span className="text-xs opacity-40 px-2 shrink-0">컴팩트 모드</span>
+          <div className="flex-1 h-px bg-white/10" />
+        </div>
+        <SettingsItem>
+          <SettingsRow title="컴팩트 모드">
+            <Switch
+              checked={isMinimal}
+              onCheckedChange={(v) => setIsMinimal(v)}
+              className="data-[state=checked]:bg-purple-500"
+            />
+          </SettingsRow>
+
+          <SettingsRow title="컴팩트 모드 중 전투 시간 표시">
+            <Switch
+              checked={showCombatTimerInMinimal}
+              onCheckedChange={(v) => setShowCombatTimerInMinimal(v)}
+              className="data-[state=checked]:bg-purple-500 disabled:opacity-30"
+            />
+          </SettingsRow>
+
+          <SettingsRow title="컴팩트 모드 중 보스 표시">
+            <Switch
+              checked={showTargetInfoInMinimal}
+              onCheckedChange={(v) => setShowTargetInfoInMinimal(v)}
+              className="data-[state=checked]:bg-purple-500 disabled:opacity-30"
+            />
+          </SettingsRow>
+        </SettingsItem>
+
         <div className="my-3 flex items-center gap-2">
           <div className="flex-1 h-px bg-white/10" />
           <span className="text-xs opacity-40 px-2 shrink-0">미터기 설정</span>
           <div className="flex-1 h-px bg-white/10" />
         </div>
-        <SettingsRow
+        {/* <SettingsRow
           title="전투력 표시"
           description="이름 옆에 전투력을 표시합니다">
           <Switch
@@ -272,7 +316,7 @@ export const SettingsPanel = ({ onClose, onReady }: Props) => {
             onCheckedChange={(v) => setShowPower(v)}
             className="data-[state=checked]:bg-purple-500"
           />
-        </SettingsRow>
+        </SettingsRow> */}
         <SettingsItem>
           <SettingsRow
             title="표시 형식"
@@ -338,12 +382,68 @@ export const SettingsPanel = ({ onClose, onReady }: Props) => {
           </SettingsRow>
         </SettingsItem>
 
-        {/* ── 테마 설정 ── */}
         <div className="my-3 flex items-center gap-2">
           <div className="flex-1 h-px bg-white/10" />
           <span className="text-xs opacity-40 px-2 shrink-0">테마 설정</span>
           <div className="flex-1 h-px bg-white/10" />
         </div>
+        <SettingsItem title="투명도 조정">
+          <SettingsRow
+            title="미터 목록 투명도"
+            align="center"
+            rightClassName="w-44">
+            <div className="flex h-8 items-center gap-3">
+              <Slider
+                min={0.1}
+                max={1}
+                step={0.05}
+                className="cursor-pointer"
+                value={[meterListOpacity]}
+                onValueChange={(value) => setMeterListOpacity(value[0])}
+              />
+              <span className="text-xs opacity-60 w-12 text-right tabular-nums">
+                {Math.round(meterListOpacity * 100)}%
+              </span>
+            </div>
+          </SettingsRow>
+          <SettingsRow
+            title="미터 배경 투명도"
+            align="center"
+            rightClassName="w-44">
+            <div className="flex h-8 items-center gap-3">
+              <Slider
+                min={0}
+                max={1}
+                step={0.05}
+                className="cursor-pointer"
+                value={[meterOpacity]}
+                onValueChange={(value) => setMeterOpacity(value[0])}
+              />
+              <span className="text-xs opacity-60 w-12 text-right tabular-nums">
+                {Math.round(meterOpacity * 100)}%
+              </span>
+            </div>
+          </SettingsRow>
+        </SettingsItem>
+
+        <SettingsRow
+          title="패널 배경 투명도"
+          align="center"
+          rightClassName="w-44">
+          <div className="flex h-8 items-center gap-3">
+            <Slider
+              min={0}
+              max={1}
+              step={0.05}
+              className="cursor-pointer"
+              value={[panelOpacity]}
+              onValueChange={(value) => setPanelOpacity(value[0])}
+            />
+            <span className="text-xs opacity-60 w-12 text-right tabular-nums">
+              {Math.round(panelOpacity * 100)}%
+            </span>
+          </div>
+        </SettingsRow>
         <SettingsItem title="유저 이름 색상">
           <div className="flex flex-col gap-2.5">
             <ColorSwatch
@@ -404,6 +504,11 @@ export const SettingsPanel = ({ onClose, onReady }: Props) => {
               label="퍼센트"
               value={theme.meterStatPercent}
               onChange={(v) => setThemeColor("meterStatPercent", v)}
+            />
+            <ColorSwatch
+              label="전투 시간"
+              value={theme.combatTimeColor}
+              onChange={(v) => setThemeColor("combatTimeColor", v)}
             />
           </div>
         </SettingsItem>

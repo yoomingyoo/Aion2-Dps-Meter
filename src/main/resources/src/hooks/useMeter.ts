@@ -24,16 +24,15 @@ export const useMeter = () => {
   const resetPendingRef = useRef(false);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const formatBattleTime = (ms: number | null | undefined) => {
+  const formatBattleTime = useCallback((ms: number | null | undefined) => {
     if (!ms || !Number.isFinite(ms) || ms < 0) return "00:00";
-
     const totalSec = Math.floor(ms / 1000);
     const min = Math.floor(totalSec / 60);
     const sec = totalSec % 60;
-
     return `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
-  };
-  const setPlayersIfChanged = (newRows: Player[]) => {
+  }, []);
+
+const setPlayersIfChanged = useCallback((newRows: Player[]) => {
     setPlayers((prev) => {
       const isSame =
         prev.length === newRows.length &&
@@ -45,7 +44,7 @@ export const useMeter = () => {
         );
       return isSame ? prev : newRows;
     });
-  };
+  },[]);
 
   const fetchDps = () => {
     if (isCollapseRef.current) return;
@@ -119,27 +118,27 @@ export const useMeter = () => {
     pollTimerRef.current = null;
   };
 
-  const reset = () => {
-    resetPendingRef.current = true;
-    resetTimestampRef.current = Date.now();
+  // const reset = () => {
+  //   resetPendingRef.current = true;
+  //   resetTimestampRef.current = Date.now();
 
-    snapshotRef.current = null;
-    lastJsonRef.current = null;
-    lastBattleTimeRef.current = null;
+  //   snapshotRef.current = null;
+  //   lastJsonRef.current = null;
+  //   lastBattleTimeRef.current = null;
 
-    setPlayers([]);
-    setTargetName("");
-    setRemainHp(0);
-    setIsInCombat(false);
-    setBattleTime(null);
+  //   setPlayers([]);
+  //   setTargetName("");
+  //   setRemainHp(0);
+  //   setIsInCombat(false);
+  //   setBattleTime(null);
 
-    if (combatTimerRef.current) {
-      clearTimeout(combatTimerRef.current);
-      combatTimerRef.current = null;
-    }
+  //   if (combatTimerRef.current) {
+  //     clearTimeout(combatTimerRef.current);
+  //     combatTimerRef.current = null;
+  //   }
 
-    // addLog("---------리셋------------");
-  };
+  //   // addLog("---------리셋------------");
+  // };
 
   // const toggleCollapse = () => {
   //   const next = !isCollapseRef.current;
@@ -157,8 +156,10 @@ export const useMeter = () => {
   // };
   const setHistoryData = useCallback((report: any) => {
     const { players: rows, targetName, remainHp } = parseCombatData(report);
+    const sorted = [...rows].sort((a, b) => b.dps - a.dps);
+
     const battleTime = (report.battleEnd ?? 0) - (report.battleStart ?? 0);
-    setPlayersIfChanged(rows);
+    setPlayersIfChanged(sorted);
     setTargetName(targetName);
     setRemainHp(remainHp);
     setBattleTime(battleTime);
@@ -180,7 +181,7 @@ export const useMeter = () => {
     isInCombat,
     remainHp,
     formatBattleTime,
-    reset,
+    // reset,
     // toggleCollapse,
     setHistoryData,
   };

@@ -1,8 +1,7 @@
 import { useEffect, useState, useRef } from "react";
-import type { Player } from "@/types";
+import type { Player, PanelType } from "@/types";
 import { DetailsPanel } from "./DetailsPanel";
 import { SettingsPanel } from "./SettingsPanel.tsx";
-import type { PanelType } from "@/types";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { HistoryPanel } from "./HistoryPanel";
 
@@ -14,11 +13,13 @@ interface SidePanelProps {
   formatBattleTime: (ms: number) => string;
   onSelectHistory: (idx: number, report: any) => void;
   historyIdx?: number;
+  players: Player[];
 }
 
 export const SidePanel = ({
   type,
   player,
+  players,
   onClose,
   combatTime,
   onSelectHistory,
@@ -73,13 +74,14 @@ export const SidePanel = ({
   return (
     <div
       style={{ left: meterWidth }}
-      className={` min-w-0 fixed top-0  ml-3 h-auto z-50 bg-[rgba(12,22,40,0.8)] text-white rounded-lg
+      className={` min-w-0 fixed top-0  ml-3 h-auto z-50 bg-(--panel-bg) text-white rounded-lg
     transition-all duration-200 ease-in-out 
     ${visible ? "visible  translate-x-0" : "invisible  -translate-x-2"}`}>
       {currentType === "details" && (
         <DetailsPanel
           key={currentPlayer?.id}
           player={currentPlayer}
+          players={players}
           onClose={onClose}
           combatTime={combatTime}
           historyIdx={historyIdx}
