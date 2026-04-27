@@ -35,7 +35,7 @@ git clone https://github.com/TK-open-public/Aion2-Dps-Meter.git
 cd Aion2-Dps-Meter
 
 # 포터블 zip 빌드 (Windows: 저장소 루트에서 build.bat 실행)
-# build\distributions\MGMeter-portable.zip 생성
+# build\distributions\MGMeter-portable-<version>.zip 생성
 ```
 
 ## 사용법
@@ -43,7 +43,7 @@ cd Aion2-Dps-Meter
 
 1. npcap (https://npcap.com/#download) 를 설치합니다. (Install Npcap in WinPcap API-compatible Mode 필수 체크)
 
-2. 포터블 패키지(MGMeter-portable.zip)를 원하는 폴더에 풀고, **RunMGMeter.bat**을 실행합니다 (UAC로 관리자 권한 요청).
+2. 포터블 패키지(`MGMeter-portable-<version>.zip`)를 원하는 폴더에 풀고, **RunMGMeter.bat**을 실행합니다 (UAC로 관리자 권한 요청).
 
 3. **아이온이 켜져있는 상태라면 먼저 캐릭터 선택창으로 이동합니다**.
 

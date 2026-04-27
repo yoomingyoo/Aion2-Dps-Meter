@@ -75,9 +75,21 @@ $stagingRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("MGMeter-portable-" 
 $portableAppDir = Join-Path $stagingRoot "app"
 $portableRuntimeDir = Join-Path $stagingRoot "runtime"
 $installDir = Join-Path $resolvedProjectDir "build\install\MGMeter"
-$zipPath = Join-Path $resolvedProjectDir "build\distributions\MGMeter-portable.zip"
 $packagingDir = Join-Path $resolvedProjectDir "packaging"
 $stalePortableDir = Join-Path $resolvedProjectDir "build\portable"
+
+$buildGradlePath = Join-Path $resolvedProjectDir "build.gradle.kts"
+$appVersion = "dev"
+if (Test-Path -LiteralPath $buildGradlePath) {
+    $pattern = '^\s*version\s*=\s*"([^"]+)"\s*$'
+    $m = [regex]::Match(
+        (Get-Content -LiteralPath $buildGradlePath -Raw),
+        $pattern,
+        [System.Text.RegularExpressions.RegexOptions]::Multiline
+    )
+    if ($m.Success) { $appVersion = $m.Groups[1].Value }
+}
+$zipPath = Join-Path $resolvedProjectDir ("build\distributions\MGMeter-portable-{0}.zip" -f $appVersion)
 
 $gradleTasks = @()
 $gradleTasks += "clean"
